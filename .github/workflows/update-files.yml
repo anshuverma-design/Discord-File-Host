@@ -18,6 +18,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5  # Hard limit - job will be killed if exceeds this
     
+    permissions:
+      contents: write  # Required to push changes
+    
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
