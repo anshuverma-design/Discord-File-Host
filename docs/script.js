@@ -90,6 +90,14 @@
     }
 
     /**
+     * Check if file type supports preview
+     */
+    function canPreview(filename) {
+        const category = getFileCategory(filename);
+        return category === 'image' || category === 'video';
+    }
+
+    /**
      * Create file card HTML
      */
     function createFileCard(file) {
@@ -99,48 +107,97 @@
         const size = formatSize(file.size);
         const date = formatDate(file.uploaded_at);
         const author = file.author || 'Unknown';
+        const hasPreview = canPreview(file.name);
 
-        const card = document.createElement('a');
+        const card = document.createElement('div');
         card.className = 'file-card';
-        card.href = file.url;
-        card.target = '_blank';
-        card.rel = 'noopener noreferrer';
+
+        // Build preview section
+        let previewHtml = '';
+        if (hasPreview) {
+            if (category === 'image') {
+                previewHtml = `
+                    <div class="file-preview">
+                        <img src="${escapeHtml(file.url)}" alt="${escapeHtml(file.name)}" loading="lazy" onerror="this.parentElement.classList.add('preview-error')">
+                    </div>
+                `;
+            } else if (category === 'video') {
+                previewHtml = `
+                    <div class="file-preview file-preview-video">
+                        <video src="${escapeHtml(file.url)}" preload="metadata" muted></video>
+                        <div class="play-overlay">
+                            <svg viewBox="0 0 24 24" fill="currentColor">
+                                <polygon points="5 3 19 12 5 21 5 3"/>
+                            </svg>
+                        </div>
+                    </div>
+                `;
+            }
+        }
 
         card.innerHTML = `
-            <div class="file-header">
-                <div class="file-icon">${icon}</div>
-                <div class="file-info">
-                    <div class="file-name">${escapeHtml(file.name)}</div>
-                    <div class="file-type">${extension}</div>
+            ${previewHtml}
+            <div class="file-content">
+                <div class="file-header">
+                    <div class="file-icon">${icon}</div>
+                    <div class="file-info">
+                        <div class="file-name">${escapeHtml(file.name)}</div>
+                        <div class="file-type">${extension}</div>
+                    </div>
                 </div>
-            </div>
-            <div class="file-meta">
-                <div class="file-meta-item">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                        <circle cx="12" cy="7" r="4"/>
-                    </svg>
-                    <span>${escapeHtml(author)}</span>
+                <div class="file-meta">
+                    <div class="file-meta-item">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                            <circle cx="12" cy="7" r="4"/>
+                        </svg>
+                        <span>${escapeHtml(author)}</span>
+                    </div>
+                    ${date ? `
+                    <div class="file-meta-item">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <polyline points="12 6 12 12 16 14"/>
+                        </svg>
+                        <span>${date}</span>
+                    </div>` : ''}
+                    ${size ? `
+                    <div class="file-meta-item">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="7 10 12 15 17 10"/>
+                            <line x1="12" y1="15" x2="12" y2="3"/>
+                        </svg>
+                        <span>${size}</span>
+                    </div>` : ''}
                 </div>
-                ${date ? `
-                <div class="file-meta-item">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="12" cy="12" r="10"/>
-                        <polyline points="12 6 12 12 16 14"/>
-                    </svg>
-                    <span>${date}</span>
-                </div>` : ''}
-                ${size ? `
-                <div class="file-meta-item">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                        <polyline points="7 10 12 15 17 10"/>
-                        <line x1="12" y1="15" x2="12" y2="3"/>
-                    </svg>
-                    <span>${size}</span>
-                </div>` : ''}
+                <div class="file-actions">
+                    <a href="${escapeHtml(file.url)}" target="_blank" rel="noopener noreferrer" class="btn btn-view">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                            <circle cx="12" cy="12" r="3"/>
+                        </svg>
+                        View
+                    </a>
+                    <a href="${escapeHtml(file.url)}" download="${escapeHtml(file.name)}" class="btn btn-download">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="7 10 12 15 17 10"/>
+                            <line x1="12" y1="15" x2="12" y2="3"/>
+                        </svg>
+                        Download
+                    </a>
+                </div>
             </div>
         `;
+
+        // Add click handler for preview
+        if (hasPreview) {
+            const preview = card.querySelector('.file-preview');
+            preview.addEventListener('click', () => {
+                window.open(file.url, '_blank', 'noopener,noreferrer');
+            });
+        }
 
         return card;
     }
